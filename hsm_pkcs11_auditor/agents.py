@@ -3,6 +3,11 @@ Distributed Component Coordination & Executive Hierarchy for Hardware Security M
 Domain: Hardware Security
 """
 import uuid
+import hmac
+import hashlib
+import os
+import secrets
+import time
 from typing import Dict, Any, List, Optional
 from .models import FrontierPayload, AgentTelemetryAlert, ExecutionStatus
 from .engine import FrontierDomainEngine
@@ -59,6 +64,54 @@ class QuorumAuthenticationAgent:
         return alerts
 
 
+class HMACAuditTrail:
+    """Tamper-evident HMAC-SHA256 audit trail for HSM operations."""
+    def __init__(self, secret_key: Optional[str] = None):
+        resolved = secret_key or os.getenv("HSM_AUDIT_SECRET_KEY")
+        if not resolved:
+            resolved = secrets.token_hex(32)
+        self.secret_key = resolved.encode("utf-8") if isinstance(resolved, str) else resolved
+        self._chain: List[Dict[str, Any]] = []
+
+    def record(self, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        import json
+        from datetime import datetime, timezone
+        payload_str = json.dumps(details, sort_keys=True)
+        payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
+        audit_id = f"HSM-AUDIT-{int(time.time()*1000)}-{len(self._chain)+1}"
+        ts = datetime.now(timezone.utc).isoformat()
+        prev_hash = self._chain[-1]["current_hash"] if self._chain else "HSM_GENESIS_0000000000000000"
+        sign_string = f"{audit_id}|{ts}|{event_type}|{payload_hash}|{prev_hash}"
+        signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
+        entry = {
+            "audit_id": audit_id,
+            "timestamp": ts,
+            "event_type": event_type,
+            "payload_hash": payload_hash,
+            "prev_hash": prev_hash,
+            "current_hash": signature,
+        }
+        self._chain.append(entry)
+        return entry
+
+    def verify_integrity(self) -> bool:
+        for i, entry in enumerate(self._chain):
+            prev = self._chain[i-1]["current_hash"] if i > 0 else "HSM_GENESIS_0000000000000000"
+            if entry["prev_hash"] != prev:
+                return False
+            sign_string = f"{entry['audit_id']}|{entry['timestamp']}|{entry['event_type']}|{entry['payload_hash']}|{entry['prev_hash']}"
+            expected = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(entry["current_hash"], expected):
+                return False
+        return True
+
+    def get_trail(self) -> List[Dict[str, Any]]:
+        return list(self._chain)
+
+
+_GLOBAL_HSM_AUDIT = HMACAuditTrail()
+
+
 class HSMSessionCoordinator:
     """Executive Coordinator & Air-Gapped Supervisory Intelligence."""
     def __init__(self):
@@ -66,6 +119,7 @@ class HSMSessionCoordinator:
         self.sub_2 = KeyUsageAttributeEnforcerAgent()
         self.sub_3 = QuorumAuthenticationAgent()
         self.execution_ledger: Dict[str, Dict[str, Any]] = {}
+        self.audit_trail = _GLOBAL_HSM_AUDIT
 
     def process(self, payload: FrontierPayload) -> Dict[str, Any]:
         all_alerts: List[AgentTelemetryAlert] = []
@@ -96,6 +150,13 @@ class HSMSessionCoordinator:
             "standard_specification": "OASIS PKCS#11 Cryptographic Token Interface",
             "consensus_summary": f"Consensus evaluation completed across 3 sub-agents with status [{status.value}].",
         }
+
+        audit_entry = self.audit_trail.record("HSM_SESSION_AUDIT", {
+            "task_id": payload.task_id,
+            "overall_status": status.value,
+            "total_alerts": len(all_alerts),
+        })
+        dossier["audit_hash"] = audit_entry["current_hash"]
 
         self.execution_ledger[payload.task_id] = dossier
         return dossier

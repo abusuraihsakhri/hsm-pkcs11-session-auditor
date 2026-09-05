@@ -1,7 +1,7 @@
-# Hsm Pkcs11 Session Auditor
+# HSM PKCS#11 Session Auditor
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+> **Domain:** Hardware Security / Cryptographic Key Management
+> **Standard:** OASIS PKCS#11 Cryptographic Token Interface
 
 <div align="center">
 
@@ -9,91 +9,140 @@
 ![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
 ![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
 </div>
 
 ---
 
-## 📖 What It Does
+## Overview
 
-Hsm Pkcs11 Session Auditor
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
+HSM PKCS#11 Session Auditor is a security-focused Python application that audits OASIS PKCS#11 Cryptoki function streams (C_Initialize, C_GenerateKey, C_Sign), enforcing multi-party M-of-N quorum and providing tamper-evident HMAC-SHA256 audit trails.
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## Key Features
 
-### 1. Guided Interactive Mode
+- **Multi-Agent Audit Coordination**: Three specialized sub-agents (PKCS11FunctionAuditorAgent, KeyUsageAttributeEnforcerAgent, QuorumAuthenticationAgent) evaluate cryptographic sessions
+- **Tamper-Evident Audit Trail**: HMAC-SHA256 chained cryptographic signatures with integrity verification
+- **Input Validation**: Rejects NaN, infinity, and empty identifiers
+- **PHI Outbound Guard**: Regex-based detection of sensitive data (SSN, MRN, phone, email)
+- **FastAPI REST API**: OpenAPI endpoints for audit operations
+- **Prometheus Metrics**: Operational telemetry export
+- **Enrichment Suite**: Domain-specific engines for compliance, side-channel resistance, NIST standards
+
+---
+
+## Installation
+
 ```bash
-python cli.py
+pip install -e .
 ```
 
-### 2. Direct Parameterized Evaluation
+Or with Docker:
 ```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
+docker build -t hsm-pkcs11-session-auditor .
+docker run -p 8000:8000 hsm-pkcs11-session-auditor
 ```
 
-### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
+---
 
-### Input Data Schema
+## Usage
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `task_id` | Parameter / observation metric | Required |
-| `target_identifier` | Parameter / observation metric | Required |
-| `primary_metric` | Parameter / observation metric | Required |
-| `secondary_metric` | Parameter / observation metric | Required |
-| `is_critical_flag` | Parameter / observation metric | Required |
-| `status_descriptor` | Parameter / observation metric | Required |
+### CLI Commands
+
+#### Run a single audit
+```bash
+python -m hsm_pkcs11_auditor.cli audit --task-id TASK-001 --target KEY-01 --primary 28.5 --secondary 14.2 --critical --status DISCORDANT
+```
+
+#### Batch process CSV records
+```bash
+python -m hsm_pkcs11_auditor.cli batch -i sample.csv -o results.csv
+```
+
+#### Verify audit trail integrity
+```bash
+python -m hsm_pkcs11_auditor.cli verify-audit
+```
+
+#### Query the supervisory chat
+```bash
+python -m hsm_pkcs11_auditor.cli chat "What standard is applied?"
+```
+
+#### Launch REST server
+```bash
+python -m hsm_pkcs11_auditor.cli serve --host 127.0.0.1 --port 8000
+```
+
+### CSV Input Format
+
+```csv
+task_id,target_identifier,primary_metric,secondary_metric,is_critical_flag,status_descriptor
+TASK-001,TARGET-01,28.4,14.2,True,DISCORDANT
+TASK-002,TARGET-02,12.0,4.1,False,NOMINAL
+```
+
+### REST API Endpoints
+
+| Endpoint | Method | Description |
+|:---------|:-------|:------------|
+| `/health` | GET | Health check |
+| `/api/audit` | POST | Submit audit task |
+| `/api/chat` | POST | Query system status |
+| `/metrics` | GET | Prometheus metrics |
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## Security
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+- **Audit Secret Key**: Configure via `AUDIT_SECRET_KEY` environment variable. If not set, a random key is generated at startup.
+- **Input Sanitization**: All metric values are validated as finite numbers; identifiers are stripped and checked for emptiness.
+- **PHI Detection**: Outbound data is inspected for SSNs, MRNs, phone numbers, emails, and patient identifiers.
+- **HMAC Verification**: Audit trail integrity is verified using both chain linkage and HMAC-SHA256 signature validation.
 
 ---
 
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+## Testing
 
 ```bash
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
-
+Run with coverage:
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+pytest -v --cov=hsm_pkcs11_auditor --cov=agents
 ```
 
 ---
 
-## 🐳 Container Deployment
+## Architecture
 
-```bash
-docker build -t hsm-pkcs11-session-auditor .
-docker run -p 8000:8000 hsm-pkcs11-session-auditor
 ```
+hsm_pkcs11_auditor/     # Core HSM audit package
+├── models.py           # Data models (FrontierPayload, ExecutionStatus)
+├── engine.py           # Domain evaluation engine
+├── agents.py           # Multi-agent coordination + HMAC audit trail
+├── server.py           # FastAPI REST server
+└── cli.py              # Command-line interface
+
+agents/                 # Enterprise supervisor system
+├── models.py           # Pydantic schemas + validation
+├── base.py             # PHI guard + HMAC audit trail
+├── workers.py          # Specialized evaluation workers
+├── supervisor.py       # Supervisor orchestrator
+├── api.py              # FastAPI endpoints
+├── metrics.py          # Prometheus exporter
+├── learning.py         # Bayesian calibration engine
+└── streamer.py         # WebSocket telemetry
+
+enrichment.py           # Domain enrichment engines
+tests/                  # Pytest test suite
+```
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
