@@ -32,6 +32,11 @@ jobs:
         pytest -v
         python -m pip check
 
+    - name: Test browser evaluator
+      run: |
+        node --check web/app.js
+        node --test web/test-app.cjs
+
     - name: Security SAST & Zero-PHI Audit
       run: |
         python -c "
