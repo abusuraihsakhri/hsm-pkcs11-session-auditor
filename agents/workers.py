@@ -1,7 +1,7 @@
 """
 Specialized Domain Worker Agents for Hsm Pkcs11 Session Auditor.
-Domain: Clinical & Biomedical AI
-Standard: CAP / CLSI / ISO Standards
+Domain: Hardware security telemetry
+Standard: illustrative telemetry thresholds
 """
 import uuid
 from typing import Dict, Any, List, Optional
@@ -20,7 +20,7 @@ class InvariantQCWorker:
                 origin_worker="InvariantQCWorker",
                 urgency=UrgencyLevel.ELEVATED,
                 summary="Primary Metric Threshold Exceeded",
-                technical_details=f"Primary measurement ({payload.primary_metric:.2f}) exceeds upper reference limit (25.00) under CAP / CLSI / ISO Standards.",
+                technical_details=f"Primary measurement ({payload.primary_metric:.2f}) exceeds upper reference limit (25.00) under illustrative telemetry thresholds.",
                 actionable_remediation="Initiate recalibration workflow and review secondary parameters.",
             ))
         return alerts
@@ -57,7 +57,7 @@ class ProtocolConformanceWorker:
                 origin_worker="ProtocolConformanceWorker",
                 urgency=UrgencyLevel.ELEVATED,
                 summary="Protocol Conformance Discordance Detected",
-                technical_details=f"Descriptor '{payload.status_descriptor}' indicates discordance with CAP / CLSI / ISO Standards standards.",
-                actionable_remediation="Re-evaluate input specimen or rerun secondary confirmation assay.",
+                technical_details=f"Descriptor '{payload.status_descriptor}' indicates discordance with illustrative telemetry thresholds standards.",
+                actionable_remediation="Review the source telemetry record and assess the reported anomaly.",
             ))
         return alerts

@@ -171,6 +171,6 @@ class HSMSessionCoordinator:
         if "status" in q or "ledger" in q:
             return f"Hardware Security Module (HSM) PKCS#11 Session & Key Custody Agent currently managing {len(self.execution_ledger)} execution tasks in air-gapped memory."
         elif "standard" in q or "spec" in q:
-            return "Active runtime operating strictly according to OASIS PKCS#11 Cryptographic Token Interface specifications."
+            return "This demonstration references the OASIS PKCS#11 Cryptographic Token Interface but implements only heuristic telemetry rules, not PKCS#11 conformance checks."
         else:
-            return f"Hardware Security Module (HSM) PKCS#11 Session & Key Custody Agent executive coordinator online. Zero-telemetry on-premises surveillance active."
+            return "Local telemetry threshold evaluator ready; no HSM or PKCS#11 device is connected."

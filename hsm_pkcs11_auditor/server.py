@@ -17,7 +17,7 @@ def create_app():
 
         app = FastAPI(
             title="Hardware Security Module (HSM) PKCS#11 Session & Key Custody Agent",
-            description="Audits OASIS PKCS#11 Cryptoki function streams (C_Initialize, C_GenerateKey, C_Sign), enforcing multi-party M-of-N quorum.",
+            description="Illustrative telemetry threshold classification; no PKCS#11 device integration or quorum authorization.",
             version="2.0.0-FRONTIER",
         )
 
