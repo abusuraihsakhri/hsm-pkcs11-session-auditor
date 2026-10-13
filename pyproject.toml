@@ -29,3 +29,9 @@ hsm-pkcs11-session-auditor = "hsm_pkcs11_auditor.cli:main"
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/hsm-pkcs11-session-auditor"
 Repository = "https://github.com/abusuraihsakhri/hsm-pkcs11-session-auditor.git"
+
+[tool.setuptools]
+py-modules = ["cli", "enrichment", "simulator", "hsm_pkcs11_auditor_app"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "hsm_pkcs11_auditor*"]
