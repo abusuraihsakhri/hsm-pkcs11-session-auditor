@@ -1,8 +1,10 @@
 """
 FastAPI REST API Server for Hsm Pkcs11 Session Auditor.
 """
-from typing import Dict, Any, List
-from fastapi import FastAPI, HTTPException
+import os
+import hmac
+from typing import Dict, Any, List, Optional
+from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
 from .base import AuditLogger, PHIGuard
 from .models import SystemTaskPayload, ConsensusDossier
@@ -17,6 +19,15 @@ app = FastAPI(
 )
 
 
+def require_api_token(x_api_key: Optional[str] = Header(default=None, alias="X-API-Key")):
+    """Deny protected operations unless explicitly configured with a bearer secret."""
+    token = os.getenv("HSM_API_TOKEN")
+    if not token:
+        raise HTTPException(status_code=503, detail="HSM_API_TOKEN is not configured")
+    if not x_api_key or not hmac.compare_digest(x_api_key, token):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
 class ChatRequest(BaseModel):
     query: str
 
@@ -26,7 +37,7 @@ def health():
     return {"status": "HEALTHY", "service": "hsm-pkcs11-session-auditor", "domain": "Clinical & Biomedical AI", "standard": "CAP / CLSI / ISO Standards", "version": "3.0.0-ENTERPRISE"}
 
 
-@app.get("/metrics")
+@app.get("/metrics", dependencies=[Depends(require_api_token)])
 def metrics():
     return {
         "dossiers_processed_total": len(supervisor.dossier_registry),
@@ -35,13 +46,13 @@ def metrics():
     }
 
 
-@app.post("/api/audit")
+@app.post("/api/audit", dependencies=[Depends(require_api_token)])
 def api_audit(payload: SystemTaskPayload):
     dossier = supervisor.process_task(payload)
     return dossier.to_dict()
 
 
-@app.post("/api/chat")
+@app.post("/api/chat", dependencies=[Depends(require_api_token)])
 def api_chat(req: ChatRequest):
     try:
         ans = supervisor.query_supervisory_chat(req.query)
@@ -50,6 +61,6 @@ def api_chat(req: ChatRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/api/audit/logs")
+@app.get("/api/audit/logs", dependencies=[Depends(require_api_token)])
 def api_audit_logs():
     return {"audit_trail": AuditLogger.get_trail(), "verified": AuditLogger.verify_integrity()}

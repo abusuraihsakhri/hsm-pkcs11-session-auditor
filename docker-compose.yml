@@ -1,17 +1,9 @@
-version: '3.8'
-
 services:
   hsm-pkcs11-session-auditor:
     build: .
-    container_name: hsm-pkcs11-session-auditor
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=hsm-pkcs11-session-auditor-prod-audit-key-2026
-      - MODEL_PROVIDER=mock
+      AUDIT_SECRET_KEY: ${AUDIT_SECRET_KEY:?Set AUDIT_SECRET_KEY in your local .env}
+      HSM_API_TOKEN: ${HSM_API_TOKEN:?Set HSM_API_TOKEN in your local .env}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3

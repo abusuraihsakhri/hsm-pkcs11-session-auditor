@@ -24,11 +24,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+        pip install -e ".[dev]"
 
     - name: Run Pytest Suite
       run: |
+        python -m compileall -q agents hsm_pkcs11_auditor
         pytest -v
+        python -m pip check
 
     - name: Security SAST & Zero-PHI Audit
       run: |
