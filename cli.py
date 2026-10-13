@@ -8,7 +8,7 @@ import sys
 from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
 from agents.base import AuditLogger
-from hsm_pkcs11_auditor.parsing import parse_bool
+from hsm_pkcs11_auditor.parsing import parse_bool, safe_spreadsheet_cell
 
 supervisor = SystemSupervisor(model_provider="mock")
 
@@ -107,8 +107,9 @@ def main(argv=None):
 
         with open(args.output, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
-            writer.writeheader()
-            writer.writerows(out_rows)
+            writer.writerow({name: safe_spreadsheet_cell(name) for name in out_fields})
+            for row in out_rows:
+                writer.writerow({name: safe_spreadsheet_cell(value) for name, value in row.items()})
         print(f"Processed {len(out_rows)} records -> {args.output}")
         return 0
 

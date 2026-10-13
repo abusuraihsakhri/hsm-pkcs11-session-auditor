@@ -7,7 +7,7 @@ import json
 import sys
 from .models import FrontierPayload
 from .agents import HSMSessionCoordinator
-from .parsing import parse_bool
+from .parsing import parse_bool, safe_spreadsheet_cell
 
 coordinator = HSMSessionCoordinator()
 
@@ -105,8 +105,9 @@ def main(argv=None):
 
         with open(args.output, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
-            writer.writeheader()
-            writer.writerows(out_rows)
+            writer.writerow({name: safe_spreadsheet_cell(name) for name in out_fields})
+            for row in out_rows:
+                writer.writerow({name: safe_spreadsheet_cell(value) for name, value in row.items()})
         print(f"Processed {len(out_rows)} records -> {args.output}")
         return 0
 
