@@ -1,10 +1,11 @@
 """
 Enrichment Feature Implementation for hsm-pkcs11-session-auditor.
-Generated based on domain-specific requirements in specifications.
+Optional threshold demonstrations; not hardware validation or compliance certification.
 """
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 import datetime
+import math
 
 # =============================================================================
 # Shared result type & base engine
@@ -25,11 +26,20 @@ class ThresholdEngine:
     FEATURE_NAME = "Enrichment"
 
     def __init__(self, threshold: float = 1.0, config: Optional[Dict[str, Any]] = None):
+        if not math.isfinite(threshold) or threshold <= 0:
+            raise ValueError("threshold must be a finite positive number")
         self.threshold = threshold
         self.config = config or {}
         self.history: List[EnrichmentResult] = []
 
     def evaluate(self, primary_value: float, secondary_value: float = 0.0, **kwargs) -> EnrichmentResult:
+        try:
+            primary_value = float(primary_value)
+            secondary_value = float(secondary_value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("enrichment values must be numeric") from exc
+        if not math.isfinite(primary_value) or not math.isfinite(secondary_value):
+            raise ValueError("enrichment values must be finite")
         alerts: List[str] = []
         recs: List[str] = []
         status = "OPTIMAL"
@@ -62,7 +72,7 @@ class ThresholdEngine:
 # Domain-specific engines (thin subclasses)
 # =============================================================================
 class ProjectSummaryEngine(ThresholdEngine):
-    """Audits OASIS PKCS#11 Cryptoki function streams (C_Initialize, C_GenerateKey, C_Sign), enforcing multi-party M-of-N quorum."""
+    """Illustrative threshold, not Cryptoki parsing or quorum enforcement."""
     FEATURE_NAME = "Project Summary"
 
 
@@ -72,32 +82,32 @@ class EnrichmentIdeasEngine(ThresholdEngine):
 
 
 class PerformanceBenchmarkingEngine(ThresholdEngine):
-    """Determine HSM session performance for enterprise key management."""
+    """Illustrative threshold, not an HSM benchmark."""
     FEATURE_NAME = "Performance Benchmarking"
 
 
 class FormalVerificationEngine(ThresholdEngine):
-    """Prove the security properties of the PKCS#11 session management."""
+    """Illustrative threshold, not formal verification."""
     FEATURE_NAME = "Formal Verification"
 
 
 class InteroperabilityTestingEngine(ThresholdEngine):
-    """Ensure compatibility with existing HSM platforms."""
+    """Illustrative threshold, not hardware interoperability testing."""
     FEATURE_NAME = "Interoperability Testing"
 
 
 class SidechannelResistanceEngine(ThresholdEngine):
-    """Eliminate timing, power, and cache-based side-channel leaks."""
+    """Illustrative threshold, not side-channel resistance testing."""
     FEATURE_NAME = "Side-Channel Resistance"
 
 
 class NistComplianceEngine(ThresholdEngine):
-    """Meet federal cryptographic standards for HSM operations."""
+    """Illustrative threshold, not NIST compliance certification."""
     FEATURE_NAME = "NIST Compliance"
 
 
 class ProductionDeploymentReadinessEngine(ThresholdEngine):
-    """Harden for enterprise HSM fleet management."""
+    """Illustrative threshold, not production readiness verification."""
     FEATURE_NAME = "Production Deployment Readiness"
 
 
