@@ -7,6 +7,7 @@ import hmac
 import hashlib
 import os
 import secrets
+import threading
 import time
 from typing import Dict, Any, List, Optional
 from .models import FrontierPayload, AgentTelemetryAlert, ExecutionStatus
@@ -72,6 +73,7 @@ class HMACAuditTrail:
             resolved = secrets.token_hex(32)
         self.secret_key = resolved.encode("utf-8") if isinstance(resolved, str) else resolved
         self._chain: List[Dict[str, Any]] = []
+        self._lock = threading.RLock()
 
     def record(self, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:
         import json
@@ -80,33 +82,36 @@ class HMACAuditTrail:
         payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
         audit_id = f"HSM-AUDIT-{int(time.time()*1000)}-{len(self._chain)+1}"
         ts = datetime.now(timezone.utc).isoformat()
-        prev_hash = self._chain[-1]["current_hash"] if self._chain else "HSM_GENESIS_0000000000000000"
-        sign_string = f"{audit_id}|{ts}|{event_type}|{payload_hash}|{prev_hash}"
-        signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
-        entry = {
-            "audit_id": audit_id,
-            "timestamp": ts,
-            "event_type": event_type,
-            "payload_hash": payload_hash,
-            "prev_hash": prev_hash,
-            "current_hash": signature,
-        }
-        self._chain.append(entry)
-        return entry
+        with self._lock:
+            prev_hash = self._chain[-1]["current_hash"] if self._chain else "HSM_GENESIS_0000000000000000"
+            sign_string = f"{audit_id}|{ts}|{event_type}|{payload_hash}|{prev_hash}"
+            signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
+            entry = {
+                "audit_id": audit_id,
+                "timestamp": ts,
+                "event_type": event_type,
+                "payload_hash": payload_hash,
+                "prev_hash": prev_hash,
+                "current_hash": signature,
+            }
+            self._chain.append(entry)
+            return entry
 
     def verify_integrity(self) -> bool:
-        for i, entry in enumerate(self._chain):
-            prev = self._chain[i-1]["current_hash"] if i > 0 else "HSM_GENESIS_0000000000000000"
-            if entry["prev_hash"] != prev:
-                return False
-            sign_string = f"{entry['audit_id']}|{entry['timestamp']}|{entry['event_type']}|{entry['payload_hash']}|{entry['prev_hash']}"
-            expected = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(entry["current_hash"], expected):
-                return False
-        return True
+        with self._lock:
+            for i, entry in enumerate(self._chain):
+                prev = self._chain[i-1]["current_hash"] if i > 0 else "HSM_GENESIS_0000000000000000"
+                if entry["prev_hash"] != prev:
+                    return False
+                sign_string = f"{entry['audit_id']}|{entry['timestamp']}|{entry['event_type']}|{entry['payload_hash']}|{entry['prev_hash']}"
+                expected = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
+                if not hmac.compare_digest(entry["current_hash"], expected):
+                    return False
+            return True
 
     def get_trail(self) -> List[Dict[str, Any]]:
-        return list(self._chain)
+        with self._lock:
+            return [entry.copy() for entry in self._chain]
 
 
 _GLOBAL_HSM_AUDIT = HMACAuditTrail()
