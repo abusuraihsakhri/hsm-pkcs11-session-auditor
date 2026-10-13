@@ -7,6 +7,7 @@ import json
 import sys
 from .models import FrontierPayload
 from .agents import HSMSessionCoordinator
+from .parsing import parse_bool, safe_spreadsheet_cell
 
 coordinator = HSMSessionCoordinator()
 
@@ -83,7 +84,7 @@ def main(argv=None):
             fieldnames = list(reader.fieldnames or [])
             rows = list(reader)
 
-        out_fields = fieldnames + ["overall_status", "total_alerts", "critical_count", "consensus_summary"]
+        out_fields = list(dict.fromkeys(fieldnames + ["overall_status", "total_alerts", "critical_count", "consensus_summary"]))
         out_rows = []
         for r in rows:
             payload = FrontierPayload(
@@ -92,7 +93,7 @@ def main(argv=None):
                 primary_metric=float(r.get("primary_metric", 15.0)),
                 secondary_metric=float(r.get("secondary_metric", 5.0)),
                 status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
+                is_critical_flag=parse_bool(r.get("is_critical_flag", False)),
             )
             dossier = coordinator.process(payload)
             row_dict = dict(r)
@@ -104,8 +105,9 @@ def main(argv=None):
 
         with open(args.output, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
-            writer.writeheader()
-            writer.writerows(out_rows)
+            writer.writerow({name: safe_spreadsheet_cell(name) for name in out_fields})
+            for row in out_rows:
+                writer.writerow({name: safe_spreadsheet_cell(value) for name, value in row.items()})
         print(f"Processed {len(out_rows)} records -> {args.output}")
         return 0
 

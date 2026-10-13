@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hsm-pkcs11-session-auditor"
 version = "2.0.0"
-description = "Hardware Security Module (HSM) PKCS#11 Session & Key Custody Engine"
+description = "Heuristic hardware-security telemetry classification and in-memory HMAC event logging"
 readme = "README.md"
 authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
 license = { text = "MIT" }
@@ -19,9 +19,19 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = []
 
+[project.optional-dependencies]
+server = ["fastapi>=0.110,<1", "uvicorn>=0.29,<1", "pydantic>=2,<3"]
+dev = ["pytest>=8,<10", "fastapi>=0.110,<1", "uvicorn>=0.29,<1", "pydantic>=2,<3", "httpx>=0.27,<1"]
+
 [project.scripts]
 hsm-pkcs11-session-auditor = "hsm_pkcs11_auditor.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/abusuraihsakhri/hsm-pkcs11-session-auditor"
 Repository = "https://github.com/abusuraihsakhri/hsm-pkcs11-session-auditor.git"
+
+[tool.setuptools]
+py-modules = ["cli", "enrichment", "simulator", "hsm_pkcs11_auditor_app"]
+
+[tool.setuptools.packages.find]
+include = ["agents*", "hsm_pkcs11_auditor*"]
