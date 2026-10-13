@@ -6,7 +6,7 @@ import hmac
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
+from .base import AuditLogger, PHIGuard, SecurityException
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
 
@@ -48,7 +48,10 @@ def metrics():
 
 @app.post("/api/audit", dependencies=[Depends(require_api_token)])
 def api_audit(payload: SystemTaskPayload):
-    dossier = supervisor.process_task(payload)
+    try:
+        dossier = supervisor.process_task(payload)
+    except SecurityException as exc:
+        raise HTTPException(status_code=422, detail="Input rejected by identifier guard") from exc
     return dossier.to_dict()
 
 
@@ -57,8 +60,8 @@ def api_chat(req: ChatRequest):
     try:
         ans = supervisor.query_supervisory_chat(req.query)
         return {"response": ans}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except SecurityException as exc:
+        raise HTTPException(status_code=422, detail="Input rejected by identifier guard") from exc
 
 
 @app.get("/api/audit/logs", dependencies=[Depends(require_api_token)])
