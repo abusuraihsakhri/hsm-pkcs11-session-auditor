@@ -33,3 +33,16 @@ def test_audit_logs_protected(monkeypatch):
     assert client.get("/api/audit/logs").status_code == 401
     assert client.get("/metrics").status_code == 401
     assert client.get("/api/audit/logs", headers={"X-API-Key": "test-only-token"}).status_code == 200
+
+
+def test_sensitive_identifier_rejected_without_exposing_value(monkeypatch):
+    monkeypatch.setenv("HSM_API_TOKEN", "test-only-token")
+    client = TestClient(enterprise_app)
+    response = client.post("/api/audit", json={**PAYLOAD, "task_id": "secret@example.com"},
+        headers={"X-API-Key": "test-only-token"})
+    assert response.status_code == 422
+    assert "secret@example.com" not in response.text
+    response = client.post("/api/chat", json={"query": "secret@example.com"},
+        headers={"X-API-Key": "test-only-token"})
+    assert response.status_code == 422
+    assert "secret@example.com" not in response.text
