@@ -70,9 +70,9 @@ class AuditTrail:
         payload_str = json.dumps(details, sort_keys=True)
         assert_no_phi(payload_str)
         payload_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
-        audit_id = f"AUDIT-{int(time.time()*1000)}-{len(self.logs)+1}"
-        ts = datetime.now(timezone.utc).isoformat()
         with self._lock:
+            audit_id = f"AUDIT-{int(time.time()*1000)}-{len(self.logs)+1}"
+            ts = datetime.now(timezone.utc).isoformat()
             prev_hash = self.logs[-1]["current_hash"] if self.logs else "GENESIS_BLOCK_0000000000000000"
             sign_string = f"{audit_id}|{ts}|{actor}|{actor_tier}|{event_type}|{payload_hash}|{prev_hash}"
             signature = hmac.new(self.secret_key, sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -126,6 +126,12 @@ class AuditLogger:
 class ActionExecutor:
     @staticmethod
     def execute_with_audit(actor: str, actor_tier: str, action_type: str, fn, *args, **kwargs):
-        res = fn(*args, **kwargs)
+        try:
+            result = fn(*args, **kwargs)
+        except Exception as exc:
+            AuditLogger.log(actor, actor_tier, action_type, {
+                "status": "FAILED", "exception_type": type(exc).__name__
+            })
+            raise
         AuditLogger.log(actor, actor_tier, action_type, {"status": "SUCCESS"})
-        return res
+        return result
